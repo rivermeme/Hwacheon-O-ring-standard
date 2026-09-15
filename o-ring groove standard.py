@@ -2,38 +2,71 @@ import streamlit as st
 import pandas as pd
 import os
 
-# 💡 분리된 oring_db.py 파일에서 데이터를 끌어옵니다.
+# 💡 분리된 database 파일 연동
 from oring_db import P_DATA, G_DATA, S_DATA
 
 st.set_page_config(page_title="UNIT R&D - O-Ring Guide", layout="wide", page_icon="⚙️")
 
-# 💡 1, 5, 6번 피드백 반영: CSS를 통한 전체 여백 축소, 제목 크기 축소, 이미지 고정 사이즈 처리
+# =========================================================
+# 💡 디자인 CSS (Tkinter 군청색 테마 복구)
+# =========================================================
 st.markdown("""
 <style>
-    /* 화면 좌우/상하 여백 대폭 축소 */
-    .block-container { padding-top: 1rem; padding-bottom: 1rem; max-width: 98%; }
-    
-    /* 요소 간격 조절 */
-    .stMarkdown p { margin-bottom: 0.2rem; }
-    
-    /* 모든 이미지 사이즈(높이) 강제 통일 및 중앙 정렬 */
-    [data-testid="stImage"] img {
-        height: 140px !important;
+    /* 전체 여백 압축 */
+    .block-container { padding-top: 1.5rem; padding-bottom: 1rem; max-width: 95%; }
+    hr { margin: 0.5em 0px !important; }
+
+    /* 상단 이미지 4개 구역: 군청색 헤더 스타일 */
+    .img-box {
+        border: 1px solid #cbd5e1;
+        background-color: white;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .img-header {
+        background-color: #1E293B; /* 군청색 */
+        color: white;
+        font-weight: bold;
+        padding: 5px 0;
+        font-size: 14px;
+    }
+    .img-content {
+        padding: 5px;
+    }
+    .img-content img {
+        height: 120px !important;
         width: auto !important;
         max-width: 100% !important;
         object-fit: contain !important;
-        border: 1px solid #cbd5e1;
         margin: 0 auto;
         display: block;
+    }
+
+    /* 우측 아코디언(전체 규격표) 군청색 배경 */
+    [data-testid="stExpander"] {
+        background-color: #0F172A !important;
+        border: none !important;
+    }
+    [data-testid="stExpander"] summary p {
+        color: white !important;
+        font-weight: bold !important;
+    }
+    [data-testid="stExpander"] summary svg {
+        color: white !important;
+    }
+    /* 아코디언 내부 표 배경은 밝게 유지 */
+    [data-testid="stExpanderDetails"] {
+        background-color: white !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 데이터 전처리 (3번 피드백: 규격표 공차 깔끔하게 합치기)
+# 데이터 전처리
 # =========================================================
 df_p = pd.DataFrame(P_DATA, columns=['호칭', 'W', 'ID', 'OD', 'd', 'd공차', 'D', 'D공차', 'H', 'H공차', 'R'])
 df_g = pd.DataFrame(G_DATA, columns=['호칭', 'W', 'ID', 'OD', 'd', 'd공차', 'D', 'D공차', 'H', 'H공차', 'R'])
+# 💡 S계열 컬럼 순서 및 매핑 오류 수정 (d, D1, G, H 제대로 매칭)
 df_s = pd.DataFrame(S_DATA, columns=['호칭', 'W', 'ID', 'OD', 'd', 'd공차', 'D1', 'D1공차', 'G', 'H', 'H공차', 'R'])
 
 def merge_tol(val, tol):
@@ -43,7 +76,7 @@ def merge_tol(val, tol):
     if len(tols) == 2: return f"{val} ({tols[0]} / {tols[1]})"
     return f"{val} ({tol})"
 
-# 표출용 데이터프레임 (공차 병합)
+# 표출용 데이터프레임
 disp_p = df_p[['호칭', 'W', 'ID', 'OD']].copy()
 disp_p['하우징내경(d)'] = df_p.apply(lambda r: merge_tol(r['d'], r['d공차']), axis=1)
 disp_p['축외경(D)'] = df_p.apply(lambda r: merge_tol(r['D'], r['D공차']), axis=1)
@@ -56,6 +89,7 @@ disp_g['축외경(D)'] = df_g.apply(lambda r: merge_tol(r['D'], r['D공차']), a
 disp_g['홈깊이(H)'] = df_g.apply(lambda r: merge_tol(r['H'], r['H공차']), axis=1)
 disp_g['R'] = df_g['R']
 
+# 💡 S계열 표출용 컬럼 오류 수정
 disp_s = df_s[['호칭', 'W', 'ID', 'OD']].copy()
 disp_s['축외경(d)'] = df_s.apply(lambda r: merge_tol(r['d'], r['d공차']), axis=1)
 disp_s['하우징내경(D1)'] = df_s.apply(lambda r: merge_tol(r['D1'], r['D1공차']), axis=1)
@@ -63,35 +97,35 @@ disp_s['홈폭(G)'] = df_s['G']
 disp_s['홈깊이(H)'] = df_s.apply(lambda r: merge_tol(r['H'], r['H공차']), axis=1)
 disp_s['R'] = df_s['R']
 
-# 검색 연산을 위한 수치형 컬럼
+# 검색 연산용 변환
 for col in ['d', 'D', 'H']:
     df_p[col + '_num'] = pd.to_numeric(df_p[col], errors='coerce')
     df_g[col + '_num'] = pd.to_numeric(df_g[col], errors='coerce')
 for col in ['d', 'D1', 'H']:
     df_s[col + '_num'] = pd.to_numeric(df_s[col], errors='coerce')
 
-# 💡 2번 피드백: 도면 치수처럼 우측 상하단에 공차 스택(Stack) 배치
-def latex_tol(val, tol):
-    if tol == '0, -0.05': return f"${val}_{{-0.05}}^{{0}}$"
-    if tol == '+0.05, 0': return f"${val}_{{0}}^{{+0.05}}$"
-    if tol == '0, -0.1': return f"${val}_{{-0.1}}^{{0}}$"
-    if tol == '+0.1, 0': return f"${val}_{{0}}^{{+0.1}}$"
-    if tol == '±0.05': return f"${val} \pm 0.05$"
-    if tol == '±0.1': return f"${val} \pm 0.1$"
-    return f"{val} ({tol})"
+# HTML 공차 스택
+def html_tol(val, tol):
+    if tol == '0, -0.05': t_up, t_dn = '0', '-0.05'
+    elif tol == '+0.05, 0': t_up, t_dn = '+0.05', '0'
+    elif tol == '0, -0.1': t_up, t_dn = '0', '-0.1'
+    elif tol == '+0.1, 0': t_up, t_dn = '+0.1', '0'
+    elif '±' in tol: return f"{val} {tol}"
+    else: return f"{val} ({tol})"
+    return f"{val}<span style='display: inline-flex; flex-direction: column; justify-content: center; vertical-align: middle; text-align: left; font-size: 0.75em; line-height: 1.1; margin-left: 3px;'><span>{t_up}</span><span>{t_dn}</span></span>"
 
 # =========================================================
-# UI 레이아웃
+# UI 렌더링 시작
 # =========================================================
-col_logo, col_title = st.columns([1, 10])
+col_logo, col_title = st.columns([1, 15])
 with col_logo:
-    if os.path.exists("로고.png"): st.image("로고.png", width=120)
+    if os.path.exists("로고.png"): st.image("로고.png", width=110)
 with col_title:
-    st.markdown("<h4 style='margin-top: 15px;'>UNIT R&D - O-Ring Specification Guide</h4>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size: 24px; font-weight: bold; margin-top: 5px; color: #1e3a8a;'>UNIT R&D - O-Ring Specification Guide</div>", unsafe_allow_html=True)
 
-st.divider() # 가로줄 컴팩트하게
+st.markdown("<hr>", unsafe_allow_html=True)
 
-# 상단 이미지 4개 구역
+# 상단 이미지 4개 구역 (군청색 헤더 적용)
 img_cols = st.columns(4)
 images_to_show = [
     ("오링 치수 및 형상", "오링 치수 및 형상.png"),
@@ -101,21 +135,26 @@ images_to_show = [
 ]
 for i, (img_title, img_path) in enumerate(images_to_show):
     with img_cols[i]:
-        st.markdown(f"**{img_title}**")
+        html_str = f"""
+        <div class="img-box">
+            <div class="img-header">{img_title}</div>
+            <div class="img-content">
+        """
+        st.markdown(html_str, unsafe_allow_html=True)
         if os.path.exists(img_path): st.image(img_path)
-        else: st.info(f"이미지 없음")
+        else: st.info("이미지 누락")
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
-st.divider()
+st.markdown("<hr>", unsafe_allow_html=True)
 
 left_col, right_col = st.columns([6, 4], gap="small")
 
 with left_col:
     # ---------------------------------------------------------
-    # [ 1. 오링 규격 선택 및 상세 제원 ]
+    # [ 1. 오링 규격 선택 ]
     # ---------------------------------------------------------
-    st.markdown("**[ 1. 오링 규격 선택 및 상세 제원 ]**")
-    
-    sel_col1, sel_col2 = st.columns([2, 3])
+    st.markdown("<b style='font-size: 16px;'>[ 1. 오링 규격 선택 및 상세 제원 ]</b>", unsafe_allow_html=True)
+    sel_col1, sel_col2 = st.columns([1.5, 3])
     with sel_col1:
         with st.container(border=True):
             series_tab = st.radio("계열 선택", ["P 계열", "G 계열", "S 계열"], horizontal=True, label_visibility="collapsed")
@@ -126,36 +165,55 @@ with left_col:
             
     with sel_col2:
         with st.container(border=True):
-            st.markdown(f"<span style='color:#2563EB; font-weight:bold;'>[ {series_tab} 호칭: {name} ]</span>", unsafe_allow_html=True)
             row = df_target[df_target['호칭'] == name].iloc[0]
-            
-            c1, c2 = st.columns(2)
-            with c1:
-                st.markdown("**■ 오링 기본 치수**")
-                st.write(f"- 선경(W) : `{row['W']}`")
-                st.write(f"- 내경(ID) : `{row['ID']}`")
-                st.write(f"- 외경(OD) : `{row['OD']}`")
+            # 💡 S계열 치수 표시 매핑 오류 수정 완료
+            if series_tab in ["P 계열", "G 계열"]:
+                detail_html = f"""
+                <div style='color:#2563EB; font-weight:bold; font-size:16px; margin-bottom:8px;'>[ {series_tab} 호칭: {name} ]</div>
+                <div style='display:flex; justify-content: space-between; font-size: 15px; line-height: 1.8;'>
+                    <div>
+                        <b>■ 오링 기본 치수</b><br>
+                        • 선경(W) : {row['W']}<br>
+                        • 내경(ID) : {row['ID']}<br>
+                        • 외경(OD) : {row['OD']}
+                    </div>
+                    <div>
+                        <b>■ 홈 권장 치수</b><br>
+                        • 홈 깊이(H) : {html_tol(row['H'], row['H공차'])}<br>
+                        • 축 외경(D) : {html_tol(row['D'], row['D공차'])}<br>
+                        • 하우징(d) : {html_tol(row['d'], row['d공차'])}<br>
+                        • 코너 R : {row['R']}
+                    </div>
+                </div>
+                """
+            else:
+                detail_html = f"""
+                <div style='color:#2563EB; font-weight:bold; font-size:16px; margin-bottom:8px;'>[ {series_tab} 호칭: {name} ]</div>
+                <div style='display:flex; justify-content: space-between; font-size: 15px; line-height: 1.8;'>
+                    <div>
+                        <b>■ 오링 기본 치수</b><br>
+                        • 선경(W) : {row['W']}<br>
+                        • 내경(ID) : {row['ID']}<br>
+                        • 외경(OD) : {row['OD']}<br>
+                        • 홈 폭(G) : {row['G']}
+                    </div>
+                    <div>
+                        <b>■ 홈 권장 치수</b><br>
+                        • 홈 깊이(H) : {html_tol(row['H'], row['H공차'])}<br>
+                        • 축 외경(d) : {html_tol(row['d'], row['d공차'])}<br>
+                        • 하우징(D1) : {html_tol(row['D1'], row['D1공차'])}<br>
+                        • 코너 R : {row['R']}
+                    </div>
+                </div>
+                """
+            st.markdown(detail_html, unsafe_allow_html=True)
                 
-            with c2:
-                st.markdown("**■ 홈 권장 치수**")
-                if series_tab in ["P 계열", "G 계열"]:
-                    st.write(f"- 홈 깊이(H) : {latex_tol(row['H'], row['H공차'])}")
-                    st.write(f"- 축 외경(D) : {latex_tol(row['D'], row['D공차'])}")
-                    st.write(f"- 하우징(d) : {latex_tol(row['d'], row['d공차'])}")
-                    st.write(f"- 코너 R : `{row['R']}`")
-                else:
-                    st.write(f"- 홈 깊이(H) : {latex_tol(row['H'], row['H공차'])}")
-                    st.write(f"- 축 외경(d) : {latex_tol(row['d'], row['d공차'])}")
-                    st.write(f"- 하우징(D1) : {latex_tol(row['D1'], row['D1공차'])}")
-                    st.write(f"- 홈 폭(G) : `{row['G']}`")
-                    st.write(f"- 코너 R : `{row['R']}`")
-
-    # ---------------------------------------------------------
-    # [ 2. 규격 통합 검색 ]
-    # ---------------------------------------------------------
-    st.markdown("**[ 2. 규격 통합 검색 ]**")
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    # 💡 4번 피드백 반영: D, d는 숫자 입력, H는 선택식(Selectbox)으로 변경
+    # ---------------------------------------------------------
+    # [ 2. 검색 ]
+    # ---------------------------------------------------------
+    st.markdown("<b style='font-size: 16px;'>[ 2. 규격 통합 검색 ]</b>", unsafe_allow_html=True)
     sch_col1, sch_col2, sch_col3 = st.columns(3)
     val_D = sch_col1.number_input("축 외경(D) / S계열은 d", value=None, step=0.1, format="%.2f")
     val_d = sch_col2.number_input("하우징 내경(d) / S계열은 D1", value=None, step=0.1, format="%.2f")
@@ -172,14 +230,12 @@ with left_col:
     res_g_pre = filter_data(df_g, val_d, val_D)
     res_s_pre = filter_data(df_s, val_d, val_D, is_s=True)
     
-    # D, d 입력값에 따라 선택 가능한 H값 리스트 동적 생성
     valid_H = set(res_p_pre['H_num'].dropna().unique()) | set(res_g_pre['H_num'].dropna().unique()) | set(res_s_pre['H_num'].dropna().unique())
     h_options = ["전체"] + [f"{x:g}" for x in sorted(list(valid_H))]
     
     val_H_str = sch_col3.selectbox("홈 깊이(H)", options=h_options)
     val_H = float(val_H_str) if val_H_str != "전체" else None
     
-    # 최종 H값 필터링
     if val_H is not None:
         res_p = res_p_pre[abs(res_p_pre['H_num'] - val_H) <= 0.25]
         res_g = res_g_pre[abs(res_g_pre['H_num'] - val_H) <= 0.25]
@@ -200,14 +256,12 @@ with left_col:
             st.error("조건을 만족하는 규격이 없습니다.")
 
 # ---------------------------------------------------------
-# 우측 사이드바: 아코디언 전체 규격표 (Tkinter Treeview 느낌)
+# 우측: 군청색 아코디언 메뉴
 # ---------------------------------------------------------
 with right_col:
-    st.markdown("**[ 규격 데이터베이스 ]**")
-    
     with st.expander("▶ P 계열 전체 규격 표", expanded=True):
-        st.dataframe(disp_p, use_container_width=True, hide_index=True, height=250)
+        st.dataframe(disp_p, use_container_width=True, hide_index=True, height=280)
     with st.expander("▶ G 계열 전체 규격 표"):
-        st.dataframe(disp_g, use_container_width=True, hide_index=True, height=250)
+        st.dataframe(disp_g, use_container_width=True, hide_index=True, height=280)
     with st.expander("▶ S 계열 전체 규격 표"):
-        st.dataframe(disp_s, use_container_width=True, hide_index=True, height=250)
+        st.dataframe(disp_s, use_container_width=True, hide_index=True, height=280)

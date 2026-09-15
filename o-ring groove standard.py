@@ -1,13 +1,15 @@
 import streamlit as st
 import pandas as pd
 import os
+import base64
 
+# 💡 분리된 oring_db.py 파일에서 데이터를 그대로 끌어옵니다!
 from oring_db import P_DATA, G_DATA, S_DATA
 
 st.set_page_config(page_title="UNIT R&D - O-Ring Guide", layout="wide", page_icon="⚙️")
 
 # =========================================================
-# 💡 완벽 복제 CSS: Tkinter 기존 프로그램과 100% 동일한 UI 구현
+# 💡 완벽 복제 CSS 및 이미지 인코딩
 # =========================================================
 st.markdown("""
 <style>
@@ -16,17 +18,17 @@ st.markdown("""
     hr { margin: 0.5em 0px !important; }
 
     /* 헤더 (로고 & 제목) */
-    .header-title { font-size: 28px; font-weight: bold; color: #1e3a8a; margin-top: 10px; margin-left: 10px; }
+    .header-title { font-size: 26px; font-weight: bold; color: #1e3a8a; margin-top: 10px; margin-left: 10px; }
 
-    /* 상단 이미지 4개 구역 (Tkinter 스타일 완벽 복제) */
+    /* 상단 이미지 4개 구역 (강제 고정으로 짤림/여백 완벽 해결) */
     .img-box { border: 1px solid #1E293B; background-color: #ffffff; text-align: center; height: 100%; display: flex; flex-direction: column; }
-    .img-header { background-color: #1E293B; color: #ffffff; font-weight: bold; font-size: 15px; padding: 6px 0; border-bottom: 1px solid #1E293B; }
-    .img-content { padding: 5px; flex-grow: 1; display: flex; align-items: center; justify-content: center; height: 160px; }
+    .img-header { background-color: #1E293B; color: #ffffff; font-weight: bold; font-size: 14px; padding: 4px 0; border-bottom: 1px solid #1E293B; }
+    .img-content { padding: 5px; flex-grow: 1; display: flex; align-items: center; justify-content: center; height: 140px; }
     .img-content img { max-height: 100%; max-width: 100%; object-fit: contain; }
 
     /* 상세 제원 텍스트 박스 */
     .detail-container { font-size: 14px; line-height: 1.8; color: #000000; }
-    .detail-title { font-size: 15px; font-weight: bold; color: #2563EB; margin-bottom: 15px; }
+    .detail-title { font-size: 15px; font-weight: bold; color: #2563EB; margin-bottom: 10px; }
     .sub-title { font-weight: bold; color: #000000; margin-bottom: 5px; font-size: 14px; }
     
     /* 공차 스택 디자인 (도면 치수 스타일) */
@@ -42,6 +44,14 @@ st.markdown("""
     .section-title { font-size: 15px; font-weight: bold; color: #000000; margin-top: 10px; margin-bottom: 5px; }
 </style>
 """, unsafe_allow_html=True)
+
+# 💡 이미지를 HTML 안에 직접 때려 박아서 레이아웃 붕괴를 원천 차단하는 함수
+def get_img_html(img_path):
+    if os.path.exists(img_path):
+        with open(img_path, "rb") as f:
+            data = base64.b64encode(f.read()).decode("utf-8")
+        return f"data:image/png;base64,{data}"
+    return ""
 
 # =========================================================
 # 데이터 준비 및 공차 렌더링 함수
@@ -98,18 +108,24 @@ with col_title:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
-# 상단 이미지 4개 구역
+# 💡 [핵심 수정 부분] 상단 이미지 4개 구역 (스트림릿 레이아웃 붕괴 완벽 차단)
 img_cols = st.columns(4, gap="small")
 images = [("오링 치수 및 형상", "오링 치수 및 형상.png"), ("오링 홈 치수 및 형상", "오링 홈 치수 및 형상.png"), 
           ("외부 가스켓 형태", "외부 가스켓 형태.png"), ("내부 가스켓 형태", "내부 가스켓 형태.png")]
 
 for i, (title, path) in enumerate(images):
     with img_cols[i]:
-        html = f"""<div class='img-box'><div class='img-header'>{title}</div><div class='img-content'>"""
+        img_src = get_img_html(path)
+        if img_src:
+            html = f"""
+            <div class='img-box'>
+                <div class='img-header'>{title}</div>
+                <div class='img-content'><img src='{img_src}'></div>
+            </div>
+            """
+        else:
+            html = f"<div class='img-box'><div class='img-header'>{title}</div><div class='img-content'>이미지 없음</div></div>"
         st.markdown(html, unsafe_allow_html=True)
-        if os.path.exists(path): st.image(path)
-        else: st.info("이미지 없음")
-        st.markdown("</div></div>", unsafe_allow_html=True)
 
 st.markdown("<hr style='margin-top: 15px !important;'>", unsafe_allow_html=True)
 
@@ -130,7 +146,7 @@ with left_col:
             st.markdown("</div>", unsafe_allow_html=True)
             
             target_df = df_p if s_type == "P 계열" else df_g if s_type == "G 계열" else df_s
-            st.markdown("<br><div style='text-align:center;'>• 호칭 선택:</div>", unsafe_allow_html=True)
+            st.markdown("<br><div style='text-align:center; font-weight:bold;'>• 호칭 선택:</div>", unsafe_allow_html=True)
             name = st.selectbox("호칭", target_df['호칭'], label_visibility="collapsed")
             st.markdown("<br><br>", unsafe_allow_html=True)
             

@@ -2,15 +2,15 @@ import streamlit as st
 import pandas as pd
 import os
 
-# 💡 분리된 database.py 파일에서 데이터를 그대로 끌어옵니다! (데이터 훼손 방지)
-from database import P_DATA, G_DATA, S_DATA
+# 💡 분리된 oring_db.py 파일에서 데이터를 그대로 끌어옵니다! (데이터 훼손 방지)
+from oring_db import P_DATA, G_DATA, S_DATA
 
 st.set_page_config(page_title="UNIT R&D - O-Ring Guide", layout="wide", page_icon="⚙️")
 
-# 데이터프레임 구성
-df_p = pd.DataFrame(P_DATA, columns=['호칭', 'W', 'ID', 'OD', 'd', 'D', 'H'])
-df_g = pd.DataFrame(G_DATA, columns=['호칭', 'W', 'ID', 'OD', 'd', 'D', 'H'])
-df_s = pd.DataFrame(S_DATA, columns=['호칭', 'W', 'ID', 'OD', 'd', 'D1', 'G', 'H'])
+# 데이터프레임 구성 (공차 및 R값 컬럼 추가)
+df_p = pd.DataFrame(P_DATA, columns=['호칭', 'W', 'ID', 'OD', 'd', 'd공차', 'D', 'D공차', 'H', 'H공차', 'R'])
+df_g = pd.DataFrame(G_DATA, columns=['호칭', 'W', 'ID', 'OD', 'd', 'd공차', 'D', 'D공차', 'H', 'H공차', 'R'])
+df_s = pd.DataFrame(S_DATA, columns=['호칭', 'W', 'ID', 'OD', 'd', 'd공차', 'D1', 'D1공차', 'G', 'H', 'H공차', 'R'])
 
 # 검색을 위해 수치형 변환
 for col in ['d', 'D', 'H']:
@@ -88,16 +88,19 @@ with tab1:
             st.write(f"- **외경 (OD)** : `{row['OD']}` mm")
             
         with c2:
-            st.markdown("##### ■ 적용 홈 권장 치수")
+            st.markdown("##### ■ 적용 홈 권장 치수 (공차 및 R값 포함)")
+            # HTML 태그를 활용해 공차를 좀 더 작고 회색으로 표시 (디자인 디테일)
             if series in ["P 계열", "G 계열"]:
-                st.write(f"- **홈 깊이 (H)** : `{row['H']}` mm")
-                st.write(f"- **축 외경 (D)** : `{row['D']}` mm")
-                st.write(f"- **하우징 내경 (d)** : `{row['d']}` mm")
+                st.markdown(f"- **홈 깊이 (H)** : `{row['H']}` <span style='font-size:0.85em; color:#64748b;'>{row['H공차']}</span> mm", unsafe_allow_html=True)
+                st.markdown(f"- **축 외경 (D)** : `{row['D']}` <span style='font-size:0.85em; color:#64748b;'>{row['D공차']}</span> mm", unsafe_allow_html=True)
+                st.markdown(f"- **하우징 내경 (d)** : `{row['d']}` <span style='font-size:0.85em; color:#64748b;'>{row['d공차']}</span> mm", unsafe_allow_html=True)
+                st.markdown(f"- **코너 반경 (R)** : `{row['R']}` mm", unsafe_allow_html=True)
             else:
-                st.write(f"- **홈 깊이 (H)** : `{row['H']}` mm")
-                st.write(f"- **축 외경 (d)** : `{row['d']}` mm")
-                st.write(f"- **하우징 내경 (D1)** : `{row['D1']}` mm")
-                st.write(f"- **홈 폭 (G)** : `{row['G']}` mm")
+                st.markdown(f"- **홈 깊이 (H)** : `{row['H']}` <span style='font-size:0.85em; color:#64748b;'>{row['H공차']}</span> mm", unsafe_allow_html=True)
+                st.markdown(f"- **축 외경 (d)** : `{row['d']}` <span style='font-size:0.85em; color:#64748b;'>{row['d공차']}</span> mm", unsafe_allow_html=True)
+                st.markdown(f"- **하우징 내경 (D1)** : `{row['D1']}` <span style='font-size:0.85em; color:#64748b;'>{row['D1공차']}</span> mm", unsafe_allow_html=True)
+                st.markdown(f"- **홈 폭 (G)** : `{row['G']}` mm", unsafe_allow_html=True)
+                st.markdown(f"- **코너 반경 (R)** : `{row['R']}` mm", unsafe_allow_html=True)
                 
 # ---------------------------------------------------------
 # Tab 2: 규격 통합 검색
@@ -152,11 +155,11 @@ with tab2:
 # Tab 3: 전체 규격 표
 # ---------------------------------------------------------
 with tab3:
-    st.subheader("P 계열 전체 규격")
+    st.subheader("P 계열 전체 규격 (공차 포함)")
     st.dataframe(df_p.drop(columns=['d_num', 'D_num', 'H_num']), use_container_width=True)
     
-    st.subheader("G 계열 전체 규격")
+    st.subheader("G 계열 전체 규격 (공차 포함)")
     st.dataframe(df_g.drop(columns=['d_num', 'D_num', 'H_num']), use_container_width=True)
     
-    st.subheader("S 계열 전체 규격")
+    st.subheader("S 계열 전체 규격 (공차 포함)")
     st.dataframe(df_s.drop(columns=['d_num', 'D1_num', 'G_num', 'H_num']), use_container_width=True)

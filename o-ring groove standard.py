@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-import base64
 
 # 💡 분리된 oring_db.py 파일 연동
 from oring_db import P_DATA, G_DATA, S_DATA
@@ -9,39 +8,65 @@ from oring_db import P_DATA, G_DATA, S_DATA
 st.set_page_config(page_title="UNIT R&D - O-Ring Guide", layout="wide", page_icon="⚙️")
 
 # =========================================================
-# 💡 완벽 복제 CSS (여백/폰트/배경색 강제 고정)
+# 💡 디자인/여백 CSS
 # =========================================================
 st.markdown("""
 <style>
-    /* 화면 전체 여백 좁히기 (Tkinter 느낌) */
-    .block-container { padding-top: 1.5rem; padding-bottom: 1rem; max-width: 98%; }
-    hr { margin: 0.5em 0px !important; }
+    /* 전체 여백 대폭 축소 */
+    .block-container { padding-top: 1rem; padding-bottom: 1rem; max-width: 98%; }
+    hr { margin: 0.8em 0px !important; }
 
     /* 헤더 로고 텍스트 정렬 */
-    .header-title { font-size: 26px; font-weight: bold; color: #1e3a8a; margin-top: 5px; }
+    .header-title { font-size: 26px; font-weight: bold; color: #1e3a8a; margin-top: 10px; margin-left: 10px; }
 
-    /* 우측 아코디언 메뉴(전체 규격표) 검은색 톤으로 덮어쓰기 */
-    [data-testid="stExpander"] {
-        background-color: #0F172A !important;
-        border: none !important;
-        border-bottom: 1px solid #1E293B !important;
-        border-radius: 0 !important;
+    /* 상단 이미지 4개 구역 컨테이너 스타일 */
+    .img-box-header { 
+        background-color: #1E293B; 
+        color: #ffffff; 
+        font-weight: bold; 
+        font-size: 14px; 
+        text-align: center; 
+        padding: 5px 0; 
+        margin-bottom: 5px;
     }
-    [data-testid="stExpander"] summary p { color: #ffffff !important; font-weight: bold !important; font-size: 14px !important; }
-    [data-testid="stExpander"] summary svg { color: #ffffff !important; }
-    [data-testid="stExpanderDetails"] { background-color: #ffffff !important; padding: 0 !important; }
+
+    /* 상세 제원 텍스트 박스 */
+    .detail-container { font-size: 15px; line-height: 1.8; color: #000000; }
+    .detail-title { font-size: 16px; font-weight: bold; color: #2563EB; margin-bottom: 15px; }
+    .sub-title { font-weight: bold; color: #000000; margin-bottom: 8px; font-size: 15px; }
     
-    /* 소제목 폰트 */
-    .section-title { font-size: 15px; font-weight: bold; color: #000000; margin-top: 15px; margin-bottom: 5px; }
+    /* 공차 스택 디자인 (도면 치수 스타일) */
+    .tol-stack { 
+        display: inline-flex; 
+        flex-direction: column; 
+        justify-content: center; 
+        align-items: flex-start; 
+        font-size: 11px; 
+        line-height: 1.1; 
+        margin-left: 4px; 
+        vertical-align: middle; 
+    }
+
+    /* 우측 아코디언 메뉴 스타일 */
+    [data-testid="stExpander"] { 
+        background-color: #0F172A !important; 
+        border: 1px solid #1E293B !important; 
+    }
+    [data-testid="stExpander"] summary p, [data-testid="stExpander"] summary svg { 
+        color: #ffffff !important; 
+        font-weight: bold !important; 
+        font-size: 15px !important; 
+    }
+    [data-testid="stExpanderDetails"] { 
+        background-color: #ffffff !important; 
+        padding: 0 !important; 
+    }
+    
+    /* 섹션 제목 ( [ 1. ... ] ) */
+    .section-title { font-size: 16px; font-weight: bold; color: #000000; margin-top: 10px; margin-bottom: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
-# 💡 레이아웃 붕괴를 원천 차단하는 Base64 이미지 렌더러
-def get_base64_img(path):
-    if os.path.exists(path):
-        with open(path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    return ""
 
 # =========================================================
 # 데이터 준비 및 공차 병합 로직
@@ -56,7 +81,6 @@ for col in ['d', 'D', 'H']:
 for col in ['d', 'D1', 'H']:
     df_s[col + '_num'] = pd.to_numeric(df_s[col], errors='coerce')
 
-# 테이블 출력용 (한 줄 텍스트)
 def merge_tol(val, tol):
     if pd.isna(tol) or not str(tol).strip(): return val
     if '±' in tol: return f"{val} {tol}"
@@ -71,7 +95,7 @@ for df in (disp_p, disp_g):
     df['축외경(D)'] = df.apply(lambda r: merge_tol(r['D'], r['D공차']), axis=1)
     df['홈깊이(H)'] = df.apply(lambda r: merge_tol(r['H'], r['H공차']), axis=1)
 
-# 💡 S계열 축 외경(D), 하우징 내경(d) 라벨 매핑 완벽 수정
+# 💡 S계열 축 외경(D), 하우징 내경(d) 라벨 매핑 완벽 반영
 disp_s['하우징내경(d)'] = disp_s.apply(lambda r: merge_tol(r['d'], r['d공차']), axis=1)
 disp_s['축외경(D)'] = disp_s.apply(lambda r: merge_tol(r['D1'], r['D1공차']), axis=1)
 disp_s['홈깊이(H)'] = disp_s.apply(lambda r: merge_tol(r['H'], r['H공차']), axis=1)
@@ -80,7 +104,6 @@ disp_p = disp_p[['호칭', 'W', 'ID', 'OD', '하우징내경(d)', '축외경(D)'
 disp_g = disp_g[['호칭', 'W', 'ID', 'OD', '하우징내경(d)', '축외경(D)', '홈깊이(H)', 'R']]
 disp_s = disp_s[['호칭', 'W', 'ID', 'OD', '하우징내경(d)', '축외경(D)', 'G', '홈깊이(H)', 'R']]
 
-# 💡 도면 치수처럼 우측 상/하단에 완벽하게 달라붙는 HTML 공차 스택
 def get_html_tol(val, tol):
     if tol == '0, -0.05': tup, tdn = '0', '-0.05'
     elif tol == '+0.05, 0': tup, tdn = '+0.05', '0'
@@ -89,7 +112,7 @@ def get_html_tol(val, tol):
     elif '±' in tol: return f"{val} {tol}"
     else: return f"{val} ({tol})"
     
-    return f"{val}<span style='display:inline-flex; flex-direction:column; justify-content:center; align-items:flex-start; font-size:11px; line-height:1; margin-left:3px; vertical-align:middle;'><span>{tup}</span><span>{tdn}</span></span>"
+    return f"{val}<span class='tol-stack'><span>{tup}</span><span>{tdn}</span></span>"
 
 # =========================================================
 # 화면 그리기 시작
@@ -98,14 +121,14 @@ def get_html_tol(val, tol):
 # 상단 로고 & 타이틀
 col_logo, col_title = st.columns([1, 15])
 with col_logo:
-    if os.path.exists("로고.png"): st.image("로고.png", width=130)
+    if os.path.exists("로고.png"): st.image("로고.png", width=140)
 with col_title:
     st.markdown("<div class='header-title'>UNIT R&D - O-Ring Specification Guide</div>", unsafe_allow_html=True)
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 💡 상단 이미지 4개 구역 (상단 군청색 얇은 바 + 제목 안짤리게 수정)
+# 상단 이미지 4개 구역 (스트림릿 고유 기능으로 복구하여 짤림 방지)
 # ---------------------------------------------------------
 img_cols = st.columns(4, gap="small")
 images = [("오링 치수 및 형상", "오링 치수 및 형상.png"), ("오링 홈 치수 및 형상", "오링 홈 치수 및 형상.png"), 
@@ -113,27 +136,17 @@ images = [("오링 치수 및 형상", "오링 치수 및 형상.png"), ("오링
 
 for i, (title, path) in enumerate(images):
     with img_cols[i]:
-        img_b64 = get_base64_img(path)
-        if img_b64:
-            html = f"""
-            <div style="border: 1px solid #cbd5e1; border-top: 4px solid #1E293B; background-color: #fff; height: 180px; display: flex; flex-direction: column;">
-                <div style="color: #000; font-weight: bold; text-align: center; padding: 8px 0 0 0; font-size: 14px;">{title}</div>
-                <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 5px;">
-                    <img src="data:image/png;base64,{img_b64}" style="max-width: 100%; max-height: 125px; object-fit: contain;">
-                </div>
-            </div>
-            """
-        else:
-            html = f"""
-            <div style="border: 1px solid #cbd5e1; border-top: 4px solid #1E293B; background-color: #fff; height: 180px; display: flex; flex-direction: column;">
-                <div style="color: #000; font-weight: bold; text-align: center; padding: 8px 0 0 0; font-size: 14px;">{title}</div>
-                <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">이미지 없음</div>
-            </div>
-            """
-        st.markdown(html, unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown(f"<div class='img-box-header'>{title}</div>", unsafe_allow_html=True)
+            if os.path.exists(path): 
+                st.image(path, use_container_width=True) # 자동으로 박스 크기에 꽉 차게 렌더링
+            else: 
+                st.info("이미지 없음")
 
-# 메인 레이아웃: 좌측(컨트롤/상세) / 우측(검은색 사이드바)
-left_col, right_col = st.columns([7, 3], gap="large")
+st.markdown("<hr>", unsafe_allow_html=True)
+
+# 💡 피드백 반영: 우측 규격집(데이터테이블)을 화면의 약 35% 이상 차지하도록 넓게 수정
+left_col, right_col = st.columns([6.2, 3.8], gap="large")
 
 with left_col:
     # ---------------------------------------------------------
@@ -156,20 +169,20 @@ with left_col:
     with sel_2:
         r = target_df[target_df['호칭'] == name].iloc[0]
         
-        # 💡 S계열 변수(d, D) 통일 렌더링
+        # S계열도 P/G와 동일한 D(축외경), d(하우징) 라벨 사용
         if s_type in ["P 계열", "G 계열"]:
             detail_html = f"""
-            <div style="border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
-                <div style='color:#2563EB; font-weight:bold; font-size:16px; margin-bottom:15px;'>[ {s_type} 호칭: {name} ]</div>
-                <div style='display:flex; justify-content: space-between; font-size: 15px; line-height: 2.0; color: #000;'>
+            <div style="border: 1px solid #cbd5e1; padding: 18px; border-radius: 8px; height: 100%;">
+                <div class='detail-title'>[ {s_type} 호칭: {name} ]</div>
+                <div style='display:flex; justify-content: space-between;' class='detail-container'>
                     <div style="flex:1;">
-                        <b style="font-size:15px;">■ 오링(O-RING) 기본 치수</b><br>
+                        <div class='sub-title'>■ 오링(O-RING) 기본 치수</div>
                         • 선경(W) &nbsp;&nbsp;&nbsp;: {r['W']}<br>
                         • 내경(ID) &nbsp;&nbsp;&nbsp;: {r['ID']}<br>
                         • 외경(OD) &nbsp;&nbsp;: {r['OD']}
                     </div>
                     <div style="flex:1;">
-                        <b style="font-size:15px;">■ 적용 홈 권장 치수</b><br>
+                        <div class='sub-title'>■ 적용 홈 권장 치수</div>
                         • 홈 깊이(H) &nbsp;&nbsp;: {get_html_tol(r['H'], r['H공차'])}<br>
                         • 축 외경(D) &nbsp;&nbsp;: {get_html_tol(r['D'], r['D공차'])}<br>
                         • 하우징 내경(d): {get_html_tol(r['d'], r['d공차'])}<br>
@@ -180,18 +193,18 @@ with left_col:
             """
         else: # S 계열
             detail_html = f"""
-            <div style="border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
-                <div style='color:#2563EB; font-weight:bold; font-size:16px; margin-bottom:15px;'>[ {s_type} 호칭: {name} ]</div>
-                <div style='display:flex; justify-content: space-between; font-size: 15px; line-height: 2.0; color: #000;'>
+            <div style="border: 1px solid #cbd5e1; padding: 18px; border-radius: 8px; height: 100%;">
+                <div class='detail-title'>[ {s_type} 호칭: {name} ]</div>
+                <div style='display:flex; justify-content: space-between;' class='detail-container'>
                     <div style="flex:1;">
-                        <b style="font-size:15px;">■ 오링(O-RING) 기본 치수</b><br>
+                        <div class='sub-title'>■ 오링(O-RING) 기본 치수</div>
                         • 선경(W) &nbsp;&nbsp;&nbsp;: {r['W']}<br>
                         • 내경(ID) &nbsp;&nbsp;&nbsp;: {r['ID']}<br>
                         • 외경(OD) &nbsp;&nbsp;: {r['OD']}<br>
                         • 홈 폭(G) &nbsp;&nbsp;&nbsp;&nbsp;: {r['G']}
                     </div>
                     <div style="flex:1;">
-                        <b style="font-size:15px;">■ 적용 홈 권장 치수</b><br>
+                        <div class='sub-title'>■ 적용 홈 권장 치수</div>
                         • 홈 깊이(H) &nbsp;&nbsp;: {get_html_tol(r['H'], r['H공차'])}<br>
                         • 축 외경(D) &nbsp;&nbsp;: {get_html_tol(r['D1'], r['D1공차'])}<br>
                         • 하우징 내경(d): {get_html_tol(r['d'], r['d공차'])}<br>
@@ -202,6 +215,8 @@ with left_col:
             """
         st.markdown(detail_html, unsafe_allow_html=True)
     
+    st.markdown("<hr>", unsafe_allow_html=True)
+
     # ---------------------------------------------------------
     # [ 2. 통합 검색 ]
     # ---------------------------------------------------------
@@ -240,6 +255,8 @@ with left_col:
 
     total = len(rp) + len(rg) + len(rs)
     
+    st.markdown("<hr>", unsafe_allow_html=True)
+    
     # ---------------------------------------------------------
     # [ 3. 검색 결과 ]
     # ---------------------------------------------------------
@@ -259,16 +276,14 @@ with left_col:
             st.markdown("<div style='color:#1E3A8A; font-weight:bold; margin-bottom:10px;'>조건을 입력하면 검색 결과가 표시됩니다.</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 우측: 아코디언 메뉴
+# 우측: 아코디언 메뉴 (검은 빈 상자 버그 해결)
 # ---------------------------------------------------------
 with right_col:
-    st.markdown("<div style='background-color:#0F172A; height:100%; min-height:800px; padding-top:10px;'>", unsafe_allow_html=True)
-    
+    # 💡 HTML <div>로 감싸지 않고 순수 Streamlit expander 사용
+    st.markdown("<div class='section-title'>[ 규격 데이터베이스 ]</div>", unsafe_allow_html=True)
     with st.expander("▶ P 계열 전체 규격 표", expanded=True):
         st.dataframe(disp_p, use_container_width=True, hide_index=True, height=500)
     with st.expander("▶ G 계열 전체 규격 표", expanded=False):
         st.dataframe(disp_g, use_container_width=True, hide_index=True, height=500)
     with st.expander("▶ S 계열 전체 규격 표", expanded=False):
         st.dataframe(disp_s, use_container_width=True, hide_index=True, height=500)
-        
-    st.markdown("</div>", unsafe_allow_html=True)

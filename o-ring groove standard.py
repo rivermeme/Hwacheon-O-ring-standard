@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import base64
 
-# 💡 분리된 oring_db.py 파일에서 데이터를 그대로 끌어옵니다!
+# 💡 분리된 oring_db.py 파일 연동
 from oring_db import P_DATA, G_DATA, S_DATA
 
 st.set_page_config(page_title="UNIT R&D - O-Ring Guide", layout="wide", page_icon="⚙️")
@@ -65,17 +65,20 @@ def merge_tol(val, tol):
     return f"{val} ({tol})"
 
 disp_p, disp_g, disp_s = df_p.copy(), df_g.copy(), df_s.copy()
+
 for df in (disp_p, disp_g):
     df['하우징내경(d)'] = df.apply(lambda r: merge_tol(r['d'], r['d공차']), axis=1)
     df['축외경(D)'] = df.apply(lambda r: merge_tol(r['D'], r['D공차']), axis=1)
     df['홈깊이(H)'] = df.apply(lambda r: merge_tol(r['H'], r['H공차']), axis=1)
-disp_s['축외경(d)'] = disp_s.apply(lambda r: merge_tol(r['d'], r['d공차']), axis=1)
-disp_s['하우징내경(D1)'] = disp_s.apply(lambda r: merge_tol(r['D1'], r['D1공차']), axis=1)
+
+# 💡 S계열 축 외경(D), 하우징 내경(d) 라벨 매핑 완벽 수정
+disp_s['하우징내경(d)'] = disp_s.apply(lambda r: merge_tol(r['d'], r['d공차']), axis=1)
+disp_s['축외경(D)'] = disp_s.apply(lambda r: merge_tol(r['D1'], r['D1공차']), axis=1)
 disp_s['홈깊이(H)'] = disp_s.apply(lambda r: merge_tol(r['H'], r['H공차']), axis=1)
 
 disp_p = disp_p[['호칭', 'W', 'ID', 'OD', '하우징내경(d)', '축외경(D)', '홈깊이(H)', 'R']]
 disp_g = disp_g[['호칭', 'W', 'ID', 'OD', '하우징내경(d)', '축외경(D)', '홈깊이(H)', 'R']]
-disp_s = disp_s[['호칭', 'W', 'ID', 'OD', '축외경(d)', '하우징내경(D1)', 'G', '홈깊이(H)', 'R']]
+disp_s = disp_s[['호칭', 'W', 'ID', 'OD', '하우징내경(d)', '축외경(D)', 'G', '홈깊이(H)', 'R']]
 
 # 💡 도면 치수처럼 우측 상/하단에 완벽하게 달라붙는 HTML 공차 스택
 def get_html_tol(val, tol):
@@ -102,7 +105,7 @@ with col_title:
 st.markdown("<hr>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 💡 [핵심 해결] 상단 이미지 4개 구역 (HTML 하드코딩으로 크기/여백 강제 고정)
+# 💡 상단 이미지 4개 구역 (상단 군청색 얇은 바 + 제목 안짤리게 수정)
 # ---------------------------------------------------------
 img_cols = st.columns(4, gap="small")
 images = [("오링 치수 및 형상", "오링 치수 및 형상.png"), ("오링 홈 치수 및 형상", "오링 홈 치수 및 형상.png"), 
@@ -113,17 +116,17 @@ for i, (title, path) in enumerate(images):
         img_b64 = get_base64_img(path)
         if img_b64:
             html = f"""
-            <div style="border: 1px solid #1E293B; background-color: #fff; height: 180px; display: flex; flex-direction: column;">
-                <div style="background-color: #1E293B; color: #fff; font-weight: bold; text-align: center; padding: 5px 0; font-size: 14px;">{title}</div>
+            <div style="border: 1px solid #cbd5e1; border-top: 4px solid #1E293B; background-color: #fff; height: 180px; display: flex; flex-direction: column;">
+                <div style="color: #000; font-weight: bold; text-align: center; padding: 8px 0 0 0; font-size: 14px;">{title}</div>
                 <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 5px;">
-                    <img src="data:image/png;base64,{img_b64}" style="max-width: 100%; max-height: 130px; object-fit: contain;">
+                    <img src="data:image/png;base64,{img_b64}" style="max-width: 100%; max-height: 125px; object-fit: contain;">
                 </div>
             </div>
             """
         else:
             html = f"""
-            <div style="border: 1px solid #1E293B; background-color: #fff; height: 180px; display: flex; flex-direction: column;">
-                <div style="background-color: #1E293B; color: #fff; font-weight: bold; text-align: center; padding: 5px 0; font-size: 14px;">{title}</div>
+            <div style="border: 1px solid #cbd5e1; border-top: 4px solid #1E293B; background-color: #fff; height: 180px; display: flex; flex-direction: column;">
+                <div style="color: #000; font-weight: bold; text-align: center; padding: 8px 0 0 0; font-size: 14px;">{title}</div>
                 <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center;">이미지 없음</div>
             </div>
             """
@@ -141,15 +144,19 @@ with left_col:
     
     with sel_1:
         with st.container(border=True):
+            st.markdown("<div style='background-color:#E2E8F0; padding:5px; margin:-17px -17px 10px -17px; border-bottom:1px solid #cbd5e1; text-align:center;'>", unsafe_allow_html=True)
             s_type = st.radio("계열 선택", ["P 계열", "G 계열", "S 계열"], horizontal=True, label_visibility="collapsed")
+            st.markdown("</div>", unsafe_allow_html=True)
+            
             target_df = df_p if s_type == "P 계열" else df_g if s_type == "G 계열" else df_s
-            st.markdown("<div style='margin-top:10px; font-weight:bold; font-size:14px;'>• 호칭 선택:</div>", unsafe_allow_html=True)
+            st.markdown("<br><div style='text-align:center; font-weight:bold; font-size:14px;'>• 호칭 선택:</div>", unsafe_allow_html=True)
             name = st.selectbox("호칭", target_df['호칭'], label_visibility="collapsed")
+            st.markdown("<br><br>", unsafe_allow_html=True)
             
     with sel_2:
         r = target_df[target_df['호칭'] == name].iloc[0]
         
-        # 💡 S계열 변수(d, D1) 완벽 수정 및 박스 디자인 통일
+        # 💡 S계열 변수(d, D) 통일 렌더링
         if s_type in ["P 계열", "G 계열"]:
             detail_html = f"""
             <div style="border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px;">
@@ -186,8 +193,8 @@ with left_col:
                     <div style="flex:1;">
                         <b style="font-size:15px;">■ 적용 홈 권장 치수</b><br>
                         • 홈 깊이(H) &nbsp;&nbsp;: {get_html_tol(r['H'], r['H공차'])}<br>
-                        • 축 외경(d) &nbsp;&nbsp;: {get_html_tol(r['d'], r['d공차'])}<br>
-                        • 하우징 내경(D1): {get_html_tol(r['D1'], r['D1공차'])}<br>
+                        • 축 외경(D) &nbsp;&nbsp;: {get_html_tol(r['D1'], r['D1공차'])}<br>
+                        • 하우징 내경(d): {get_html_tol(r['d'], r['d공차'])}<br>
                         • 코너 R &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: {r['R']}
                     </div>
                 </div>
@@ -221,7 +228,6 @@ with left_col:
     h_str = sch_3.selectbox("홈 깊이(H)", options=["전체"] + [f"{x:g}" for x in valid_H])
     val_H = float(h_str) if h_str != "전체" else None
     
-    # 예전 Tkinter UI와 동일하게 버튼 배치
     sch_4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
     sch_4.button("🔍 검색 실행")
     
@@ -256,9 +262,13 @@ with left_col:
 # 우측: 아코디언 메뉴
 # ---------------------------------------------------------
 with right_col:
+    st.markdown("<div style='background-color:#0F172A; height:100%; min-height:800px; padding-top:10px;'>", unsafe_allow_html=True)
+    
     with st.expander("▶ P 계열 전체 규격 표", expanded=True):
         st.dataframe(disp_p, use_container_width=True, hide_index=True, height=500)
     with st.expander("▶ G 계열 전체 규격 표", expanded=False):
         st.dataframe(disp_g, use_container_width=True, hide_index=True, height=500)
     with st.expander("▶ S 계열 전체 규격 표", expanded=False):
         st.dataframe(disp_s, use_container_width=True, hide_index=True, height=500)
+        
+    st.markdown("</div>", unsafe_allow_html=True)
